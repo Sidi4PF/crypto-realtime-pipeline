@@ -1,19 +1,29 @@
 import os
 
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, functions as F
 
+from spark_jobs.s3 import configure_s3, s3_path
 from spark_jobs.transforms import compute_ohlc, parse_trades
 
 BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "redpanda:9092")
 RAW_TOPIC = os.getenv("RAW_TRADES_TOPIC", "trades.raw")
 WINDOW = os.getenv("WINDOW_DURATION", "1 minute")
 WATERMARK = os.getenv("WATERMARK", "10 seconds")
-CHECKPOINT = os.getenv("CHECKPOINT_DIR", "/opt/app/checkpoints/ohlc_console")
+CHECKPOINT_ROOT = os.getenv("CHECKPOINT_DIR", "/opt/app/checkpoints")
+
+
+def partitioned(df, time_col: str):
+    """Add the physical partition columns used across every layer."""
+    return (
+        df.withColumn("dt", F.to_date(time_col))
+        .withColumn("hour", F.hour(time_col))
+    )
 
 
 def main() -> None:
     spark = SparkSession.builder.appName("ohlc-1m").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
+    configure_s3(spark)
 
     raw = (
         spark.readStream.format("kafka")
@@ -24,19 +34,44 @@ def main() -> None:
         .load()
     )
 
-    candles = compute_ohlc(parse_trades(raw), WINDOW, WATERMARK)
+    trades = parse_trades(raw)
 
-    query = (
-        candles.writeStream.outputMode("update")
-        .format("console")
-        .option("truncate", "false")
-        .option("numRows", 10)
-        .option("checkpointLocation", CHECKPOINT)
-        .trigger(processingTime="10 seconds")
+    bronze = (
+        partitioned(trades, "trade_time")
+        .writeStream.outputMode("append")
+        .format("parquet")
+        .option("path", s3_path("bronze", "trades"))
+        .option("checkpointLocation", f"{CHECKPOINT_ROOT}/bronze_trades")
+        .partitionBy("symbol", "dt", "hour")
+        .trigger(processingTime="30 seconds")
         .start()
     )
 
-    query.awaitTermination()
+    candles = compute_ohlc(trades, WINDOW, WATERMARK)
+
+    silver = (
+        partitioned(candles, "window_start")
+        .writeStream.outputMode("append")
+        .format("parquet")
+        .option("path", s3_path("silver", "ohlc_1m"))
+        .option("checkpointLocation", f"{CHECKPOINT_ROOT}/silver_ohlc_1m")
+        .partitionBy("symbol", "dt", "hour")
+        .trigger(processingTime="30 seconds")
+        .start()
+    )
+
+    console = (
+        candles.writeStream.outputMode("update")
+        .format("console")
+        .option("truncate", "false")
+        .option("numRows", 5)
+        .option("checkpointLocation", f"{CHECKPOINT_ROOT}/console")
+        .trigger(processingTime="15 seconds")
+        .start()
+    )
+
+    for query in (bronze, silver, console):
+        query.awaitTermination()
 
 
 if __name__ == "__main__":
