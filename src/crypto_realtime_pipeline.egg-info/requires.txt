@@ -1,0 +1,7 @@
+websockets<16,>=13
+confluent-kafka>=2.5
+python-dotenv>=1.0
+
+[dev]
+ruff>=0.6
+pytest>=8.0

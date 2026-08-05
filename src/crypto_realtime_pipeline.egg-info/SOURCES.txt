@@ -1,0 +1,7 @@
+pyproject.toml
+src/crypto_realtime_pipeline.egg-info/PKG-INFO
+src/crypto_realtime_pipeline.egg-info/SOURCES.txt
+src/crypto_realtime_pipeline.egg-info/dependency_links.txt
+src/crypto_realtime_pipeline.egg-info/requires.txt
+src/crypto_realtime_pipeline.egg-info/top_level.txt
+src/producer/__init__.py

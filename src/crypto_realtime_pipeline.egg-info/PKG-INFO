@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: crypto-realtime-pipeline
+Version: 0.1.0
+Summary: Real-time crypto trade pipeline: Binance websocket to Redpanda to Spark to S3
+Requires-Python: >=3.11
+Requires-Dist: websockets<16,>=13
+Requires-Dist: confluent-kafka>=2.5
+Requires-Dist: python-dotenv>=1.0
+Provides-Extra: dev
+Requires-Dist: ruff>=0.6; extra == "dev"
+Requires-Dist: pytest>=8.0; extra == "dev"
