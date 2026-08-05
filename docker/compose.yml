@@ -49,5 +49,35 @@ services:
       redpanda:
         condition: service_healthy
 
+  spark:
+    image: apache/spark:3.5.3
+    container_name: spark
+    profiles: ["compute"]
+    user: root
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /opt/app/src
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      RAW_TRADES_TOPIC: trades.raw
+      WATERMARK: 10 seconds
+      WINDOW_DURATION: 1 minute
+    volumes:
+      - ../src:/opt/app/src
+      - ../tests:/opt/app/tests
+      - ../checkpoints:/opt/app/checkpoints
+      - ivy-cache:/root/.ivy2
+    working_dir: /opt/app
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[3]
+      --driver-memory 3g
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3
+      --conf spark.sql.shuffle.partitions=3
+      --conf spark.sql.session.timeZone=UTC
+      src/spark_jobs/streaming_job.py
+
 volumes:
   redpanda-data:
+  ivy-cache:
