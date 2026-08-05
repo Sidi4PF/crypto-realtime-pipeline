@@ -61,6 +61,7 @@ async def stream_trades(producer: Producer) -> None:
                     producer.produce(
                         topic=settings.raw_topic,
                         key=event["symbol"].encode(),
+                        partition=settings.partition_for[event["symbol"]],
                         value=json.dumps(event).encode(),
                         callback=on_delivery,
                     )

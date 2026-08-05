@@ -12,6 +12,7 @@ class Settings:
     ws_base: str = os.getenv("BINANCE_WS_BASE", "wss://stream.binance.com:9443")
     raw_topic: str = os.getenv("RAW_TRADES_TOPIC", "trades.raw")
     log_every_n: int = int(os.getenv("LOG_EVERY_N", "500"))
+    num_partitions: int = int(os.getenv("RAW_TRADES_PARTITIONS", "3"))
     symbols: list[str] = field(
         default_factory=lambda: [
             s.strip().lower()
@@ -24,6 +25,11 @@ class Settings:
     def stream_url(self) -> str:
         streams = "/".join(f"{s}@trade" for s in self.symbols)
         return f"{self.ws_base}/stream?streams={streams}"
+
+    @property
+    def partition_for(self) -> dict[str, int]:
+        """Deterministic symbol to partition mapping, one symbol per partition."""
+        return {s.upper(): i % self.num_partitions for i, s in enumerate(self.symbols)}
 
 
 settings = Settings()
