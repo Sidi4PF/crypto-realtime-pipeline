@@ -18,6 +18,7 @@ orchestration = [
     "duckdb>=1.1",
     "boto3>=1.35",
     "requests>=2.32",
+    "pyarrow>=17.0",
 ]
 
 [tool.setuptools.packages.find]

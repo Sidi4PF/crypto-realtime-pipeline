@@ -9,7 +9,7 @@ RESOLUTIONS = {"5m": 5, "15m": 15, "1h": 60}
 @asset(
     partitions_def=hourly_partitions,
     group_name="gold",
-    deps=["compacted_ohlc_1m"],
+    deps=["compacted_ohlc_1m", "backfilled_ohlc_1m"],
     description="Aggregate 1-minute candles into 5m, 15m and 1h resolutions.",
 )
 def ohlc_rollups(context: AssetExecutionContext, lake: LakeResource) -> None:
