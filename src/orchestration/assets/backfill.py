@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
 from dagster import AssetExecutionContext, MetadataValue, asset
@@ -36,9 +36,7 @@ def fetch_klines(symbol: str, start_ms: int, end_ms: int) -> list[list]:
 def backfilled_ohlc_1m(context: AssetExecutionContext, lake: LakeResource) -> None:
     date_part, hour = partition_to_path_parts(context.partition_key)
 
-    start = datetime.strptime(f"{date_part} {hour}", "%Y-%m-%d %H").replace(
-        tzinfo=timezone.utc
-    )
+    start = datetime.strptime(f"{date_part} {hour}", "%Y-%m-%d %H").replace(tzinfo=UTC)
     start_ms = int(start.timestamp() * 1000)
     end_ms = start_ms + 3_600_000
 
@@ -55,8 +53,8 @@ def backfilled_ohlc_1m(context: AssetExecutionContext, lake: LakeResource) -> No
 
         records = [
             {
-                "window_start": datetime.fromtimestamp(k[0] / 1000, tz=timezone.utc),
-                "window_end": datetime.fromtimestamp((k[6] + 1) / 1000, tz=timezone.utc),
+                "window_start": datetime.fromtimestamp(k[0] / 1000, tz=UTC),
+                "window_end": datetime.fromtimestamp((k[6] + 1) / 1000, tz=UTC),
                 "symbol": symbol,
                 "open": float(k[1]),
                 "high": float(k[2]),

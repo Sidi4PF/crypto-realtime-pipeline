@@ -1,8 +1,7 @@
 import json
 import os
-from collections import defaultdict
 
-from confluent_kafka import Consumer, TopicPartition
+from confluent_kafka import Consumer
 
 
 def build_consumer(group_suffix: str) -> Consumer:

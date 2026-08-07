@@ -16,10 +16,7 @@ def ohlc_rollups(context: AssetExecutionContext, lake: LakeResource) -> None:
     date_part, hour = partition_to_path_parts(context.partition_key)
     con = lake.connect()
 
-    source = (
-        f"{lake.path('silver', 'ohlc_1m_compacted')}"
-        f"/*/dt={date_part}/hour={hour}/*.parquet"
-    )
+    source = f"{lake.path('silver', 'ohlc_1m_compacted')}/*/dt={date_part}/hour={hour}/*.parquet"
 
     try:
         con.execute(f"SELECT 1 FROM read_parquet('{source}', hive_partitioning=true) LIMIT 1")
@@ -54,10 +51,6 @@ def ohlc_rollups(context: AssetExecutionContext, lake: LakeResource) -> None:
             """
         )
 
-        written[label] = con.execute(
-            f"SELECT count(*) FROM read_parquet('{target}')"
-        ).fetchone()[0]
+        written[label] = con.execute(f"SELECT count(*) FROM read_parquet('{target}')").fetchone()[0]
 
-    context.add_output_metadata(
-        {f"rows_{k}": MetadataValue.int(v) for k, v in written.items()}
-    )
+    context.add_output_metadata({f"rows_{k}": MetadataValue.int(v) for k, v in written.items()})

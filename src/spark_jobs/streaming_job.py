@@ -1,6 +1,7 @@
 import os
 
-from pyspark.sql import SparkSession, functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 
 from spark_jobs.s3 import configure_s3, s3_path
 from spark_jobs.transforms import compute_ohlc, parse_trades
@@ -15,10 +16,7 @@ AGG_TOPIC = os.getenv("AGG_OHLC_TOPIC", "ohlc.1m")
 
 def partitioned(df, time_col: str):
     """Add the physical partition columns used across every layer."""
-    return (
-        df.withColumn("dt", F.to_date(time_col))
-        .withColumn("hour", F.hour(time_col))
-    )
+    return df.withColumn("dt", F.to_date(time_col)).withColumn("hour", F.hour(time_col))
 
 
 def main() -> None:

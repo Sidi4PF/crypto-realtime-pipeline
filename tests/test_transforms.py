@@ -1,5 +1,6 @@
 import pytest
-from pyspark.sql import SparkSession, functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 
 from spark_jobs.transforms import compute_ohlc
 

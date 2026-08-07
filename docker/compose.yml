@@ -171,6 +171,24 @@ services:
       streamlit run src/dashboard/app.py --server.port 8501 --server.address 0.0.0.0
       "
 
+  producer:
+    build:
+      context: ..
+      dockerfile: docker/producer.Dockerfile
+    container_name: producer
+    profiles: ["full"]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      BINANCE_WS_BASE: wss://stream.binance.com:9443
+      SYMBOLS: btcusdt,ethusdt,solusdt
+      RAW_TRADES_TOPIC: trades.raw
+      RAW_TRADES_PARTITIONS: 3
+      LOG_EVERY_N: 500
+    restart: unless-stopped
+
 volumes:
   redpanda-data:
   ivy-cache:

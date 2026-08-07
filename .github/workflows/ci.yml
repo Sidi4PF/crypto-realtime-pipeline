@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Check formatting
+        run: ruff format --check src tests
+
+      - name: Lint
+        run: ruff check src tests
+
+  test:
+    name: Spark transform tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pytest inside the Spark image
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/src:/opt/app/src" \
+            -v "${{ github.workspace }}/tests:/opt/app/tests" \
+            -v "${{ github.workspace }}/docker/run-tests.sh:/opt/app/run-tests.sh" \
+            -w /opt/app \
+            --entrypoint bash \
+            apache/spark:3.5.3 \
+            /opt/app/run-tests.sh
+
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialise without backend
+        run: terraform init -backend=false
+
+      - name: Validate
+        run: terraform validate
+
+  build:
+    name: Build producer image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/producer.Dockerfile
+          push: false
+          tags: crypto-producer:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
