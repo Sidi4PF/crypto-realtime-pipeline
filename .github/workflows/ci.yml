@@ -40,6 +40,7 @@ jobs:
       - name: Run pytest inside the Spark image
         run: |
           docker run --rm \
+            --user root \
             -v "${{ github.workspace }}/src:/opt/app/src" \
             -v "${{ github.workspace }}/tests:/opt/app/tests" \
             -v "${{ github.workspace }}/docker/run-tests.sh:/opt/app/run-tests.sh" \
