@@ -57,18 +57,17 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
-      minio:
-        condition: service_healthy
     environment:
       PYTHONPATH: /opt/app/src
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
       RAW_TRADES_TOPIC: trades.raw
       WATERMARK: 10 seconds
       WINDOW_DURATION: 1 minute
-      S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: crypto-lake
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      S3_ENDPOINT: ""
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
     volumes:
       - ../src:/opt/app/src
       - ../tests:/opt/app/tests
@@ -124,17 +123,14 @@ services:
     image: python:3.11-slim
     container_name: dagster
     profiles: ["orchestrate"]
-    depends_on:
-      minio:
-        condition: service_healthy
     environment:
       PYTHONPATH: /opt/app/src
       DAGSTER_HOME: /opt/app/dagster_home
-      S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: crypto-lake
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
-      AWS_REGION: eu-west-3
+      S3_ENDPOINT: ""
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
     ports:
       - "3000:3000"
     volumes:

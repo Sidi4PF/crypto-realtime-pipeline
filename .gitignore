@@ -9,4 +9,5 @@ checkpoints/
 *.log
 .terraform/
 *.tfstate
-*.tfstate.*
+*.tfstate.*infra/terraform.tfvars
+infra/.terraform.lock.hcl
