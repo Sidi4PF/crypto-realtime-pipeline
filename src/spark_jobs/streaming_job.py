@@ -10,6 +10,7 @@ RAW_TOPIC = os.getenv("RAW_TRADES_TOPIC", "trades.raw")
 WINDOW = os.getenv("WINDOW_DURATION", "1 minute")
 WATERMARK = os.getenv("WATERMARK", "10 seconds")
 CHECKPOINT_ROOT = os.getenv("CHECKPOINT_DIR", "/opt/app/checkpoints")
+AGG_TOPIC = os.getenv("AGG_OHLC_TOPIC", "ohlc.1m")
 
 
 def partitioned(df, time_col: str):
@@ -60,6 +61,20 @@ def main() -> None:
         .start()
     )
 
+    live = (
+        candles.select(
+            F.col("symbol").alias("key"),
+            F.to_json(F.struct("*")).alias("value"),
+        )
+        .writeStream.outputMode("update")
+        .format("kafka")
+        .option("kafka.bootstrap.servers", BOOTSTRAP)
+        .option("topic", AGG_TOPIC)
+        .option("checkpointLocation", f"{CHECKPOINT_ROOT}/live_ohlc")
+        .trigger(processingTime="2 seconds")
+        .start()
+    )
+
     console = (
         candles.writeStream.outputMode("update")
         .format("console")
@@ -70,7 +85,7 @@ def main() -> None:
         .start()
     )
 
-    for query in (bronze, silver, console):
+    for query in (bronze, silver, live, console):
         query.awaitTermination()
 
 

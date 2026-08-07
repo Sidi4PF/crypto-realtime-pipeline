@@ -52,7 +52,7 @@ services:
   spark:
     image: apache/spark:3.5.3
     container_name: spark
-    profiles: ["compute"]
+    profiles: ["compute", "serve"]
     user: root
     depends_on:
       redpanda:
@@ -68,6 +68,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_REGION: ${AWS_REGION}
+      AGG_OHLC_TOPIC: ohlc.1m
     volumes:
       - ../src:/opt/app/src
       - ../tests:/opt/app/tests
@@ -143,6 +144,31 @@ services:
       sh -c "
       pip install -q -e '.[orchestration]' &&
       dagster dev -m orchestration.definitions -h 0.0.0.0 -p 3000
+      "
+
+  dashboard:
+    image: python:3.11-slim
+    container_name: dashboard
+    profiles: ["serve"]
+    environment:
+      PYTHONPATH: /opt/app/src
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      AGG_OHLC_TOPIC: ohlc.1m
+      S3_ENDPOINT: ""
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../src:/opt/app/src
+      - ../pyproject.toml:/opt/app/pyproject.toml
+    working_dir: /opt/app
+    command: >
+      sh -ec "
+      pip install -q -e '.[dashboard]' &&
+      streamlit run src/dashboard/app.py --server.port 8501 --server.address 0.0.0.0
       "
 
 volumes:

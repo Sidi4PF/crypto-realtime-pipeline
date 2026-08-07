@@ -9,3 +9,17 @@ Requires-Dist: python-dotenv>=1.0
 Provides-Extra: dev
 Requires-Dist: ruff>=0.6; extra == "dev"
 Requires-Dist: pytest>=8.0; extra == "dev"
+Provides-Extra: orchestration
+Requires-Dist: dagster<1.12,>=1.9; extra == "orchestration"
+Requires-Dist: dagster-webserver<1.12,>=1.9; extra == "orchestration"
+Requires-Dist: dagster-duckdb>=0.25; extra == "orchestration"
+Requires-Dist: duckdb>=1.1; extra == "orchestration"
+Requires-Dist: boto3>=1.35; extra == "orchestration"
+Requires-Dist: requests>=2.32; extra == "orchestration"
+Requires-Dist: pyarrow>=17.0; extra == "orchestration"
+Provides-Extra: dashboard
+Requires-Dist: streamlit>=1.39; extra == "dashboard"
+Requires-Dist: confluent-kafka>=2.5; extra == "dashboard"
+Requires-Dist: duckdb>=1.1; extra == "dashboard"
+Requires-Dist: plotly>=5.24; extra == "dashboard"
+Requires-Dist: pandas>=2.2; extra == "dashboard"
