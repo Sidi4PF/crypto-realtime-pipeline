@@ -49,9 +49,9 @@ services:
       redpanda:
         condition: service_healthy
 
-  spark:
+  spark-bronze:
     image: apache/spark:3.5.3
-    container_name: spark
+    container_name: spark-bronze
     profiles: ["compute", "serve"]
     user: root
     depends_on:
@@ -61,6 +61,39 @@ services:
       PYTHONPATH: /opt/app/src
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
       RAW_TRADES_TOPIC: trades.raw
+      S3_ENDPOINT: ""
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+    volumes:
+      - ../src:/opt/app/src
+      - ../tests:/opt/app/tests
+      - checkpoint-data:/opt/app/checkpoints
+      - ivy-cache:/root/.ivy2
+    working_dir: /opt/app
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[2]
+      --driver-memory 2g
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262
+      --conf spark.sql.shuffle.partitions=3
+      --conf spark.sql.session.timeZone=UTC
+      src/spark_jobs/bronze_job.py
+
+  spark-silver:
+    image: apache/spark:3.5.3
+    container_name: spark-silver
+    profiles: ["compute", "serve"]
+    user: root
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /opt/app/src
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      RAW_TRADES_TOPIC: trades.raw
+      AGG_OHLC_TOPIC: ohlc.1m
       WATERMARK: 10 seconds
       WINDOW_DURATION: 1 minute
       S3_ENDPOINT: ""
@@ -68,21 +101,52 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_REGION: ${AWS_REGION}
-      AGG_OHLC_TOPIC: ohlc.1m
     volumes:
       - ../src:/opt/app/src
       - ../tests:/opt/app/tests
-      - ../checkpoints:/opt/app/checkpoints
+      - checkpoint-data:/opt/app/checkpoints
       - ivy-cache:/root/.ivy2
     working_dir: /opt/app
     command: >
       /opt/spark/bin/spark-submit
-      --master local[3]
-      --driver-memory 3g
+      --master local[2]
+      --driver-memory 2g
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262
       --conf spark.sql.shuffle.partitions=3
       --conf spark.sql.session.timeZone=UTC
-      src/spark_jobs/streaming_job.py
+      --conf spark.sql.streaming.stateStore.providerClass=org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider
+      --conf spark.sql.streaming.stateStore.rocksdb.changelogCheckpointing.enabled=true
+      src/spark_jobs/silver_job.py
+
+  spark-live:
+    image: apache/spark:3.5.3
+    container_name: spark-live
+    profiles: ["serve"]
+    user: root
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /opt/app/src
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      RAW_TRADES_TOPIC: trades.raw
+      AGG_OHLC_TOPIC: ohlc.1m
+      WATERMARK: 10 seconds
+      WINDOW_DURATION: 1 minute
+    volumes:
+      - ../src:/opt/app/src
+      - checkpoint-data:/opt/app/checkpoints
+      - ivy-cache:/root/.ivy2
+    working_dir: /opt/app
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[2]
+      --driver-memory 2g
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3
+      --conf spark.sql.shuffle.partitions=3
+      --conf spark.sql.session.timeZone=UTC
+      --conf spark.sql.streaming.stateStore.providerClass=org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider
+      src/spark_jobs/live_job.py
 
   minio:
     image: minio/minio:RELEASE.2024-10-13T13-34-11Z
@@ -196,3 +260,4 @@ volumes:
   dagster-home:
   dagster-build:
   mc-config:
+  checkpoint-data:

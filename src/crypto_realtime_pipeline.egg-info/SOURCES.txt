@@ -21,6 +21,8 @@ src/producer/__init__.py
 src/producer/config.py
 src/producer/main.py
 src/producer/schema.py
+src/spark_jobs/bronze_job.py
+src/spark_jobs/live_job.py
 src/spark_jobs/s3.py
-src/spark_jobs/streaming_job.py
+src/spark_jobs/silver_job.py
 src/spark_jobs/transforms.py
