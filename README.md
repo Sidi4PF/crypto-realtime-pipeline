@@ -22,6 +22,22 @@ Two read paths feed the dashboard. The current candle comes from the Kafka topic
 for sub-second latency, while history is read from S3 Parquet through DuckDB. The
 dashboard never polls object storage in a loop.
 
+## Demo
+
+The dashboard, current candle streamed from Kafka while history is read from S3
+through DuckDB:
+
+![Live dashboard](docs/dashboard-live.gif)
+
+The asset graph, showing both silver sources feeding the rollups:
+
+![Dagster lineage](docs/dagster-lineage.gif)
+
+One hour of streaming output compacted from 180 files to 3, with the two data
+quality checks:
+
+![Dagster compaction](docs/dagster-compaction.gif)
+
 ## Layers
 
 | Layer  | Content                | Written by                            | Partitioning       |
@@ -38,8 +54,8 @@ Numbers below come from actual runs, not estimates.
 | ------------------------------ | --------------------------------------------- |
 | Websocket to broker lag        | 50 ms at best, 700 to 900 ms sustained        |
 | Trade throughput               | 25 to 30 trades per second across 3 symbols   |
-| Silver files before compaction | around 180 per hour                           |
-| Silver files after compaction  | 3 per hour, one per symbol                    |
+| Silver files before compaction | 180 per hour, one per symbol per minute       |
+| Silver files after compaction  | 3 per hour, a 60 to 1 reduction               |
 | Backfill throughput            | 60 candles per symbol per hour, one REST call |
 
 ## Running it

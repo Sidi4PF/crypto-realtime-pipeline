@@ -25,7 +25,12 @@ def connect() -> duckdb.DuckDBPyConnection:
 
 
 def load_history(symbol: str, resolution: str, limit: int = 120) -> pd.DataFrame:
-    """Read recent candles from the lake. Falls back to an empty frame if absent."""
+    """Read the most recent candles from the lake.
+
+    The six-hour window keeps orphan candles from earlier sessions out of the
+    chart. Without it, a LIMIT over all history mixes days and Plotly stretches
+    the time axis across the empty gap between them.
+    """
     bucket = os.getenv("S3_BUCKET", "crypto-lake")
 
     if resolution == "1m":
@@ -40,10 +45,15 @@ def load_history(symbol: str, resolution: str, limit: int = 120) -> pd.DataFrame
             SELECT window_start, symbol, open, high, low, close, volume, trade_count
             FROM read_parquet('{path}', hive_partitioning=true)
             WHERE symbol = ?
+              AND window_start >= (
+                  SELECT max(window_start) - INTERVAL 6 HOUR
+                  FROM read_parquet('{path}', hive_partitioning=true)
+                  WHERE symbol = ?
+              )
             ORDER BY window_start DESC
             LIMIT {limit}
             """,
-            [symbol],
+            [symbol, symbol],
         ).df()
     except Exception:
         return pd.DataFrame()
